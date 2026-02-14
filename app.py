@@ -1,50 +1,60 @@
 import streamlit as st
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import StandardScaler
+import numpy as np
 
-st.set_page_config(page_title="Music Recommendation System")
+# -------------------------
+# 1. Load Dataset
+# -------------------------
+df = pd.read_csv('songs_dataset.csv')
 
+# -------------------------
+# 2. App Title & Description
+# -------------------------
+st.set_page_config(page_title="🎵 Intelligent Music Recommender", layout="wide")
 st.title("🎵 Intelligent Music Recommendation System")
-st.write("MCA Final Year Project - ML Based Recommendation")
+st.subheader("MCA Final Year Project - ML-Based Recommendation")
+st.write("Select a song you like, and get smart recommendations!")
 
-# Load dataset
-df = pd.read_csv("dataset.csv")
+# -------------------------
+# 3. Song Selection
+# -------------------------
+song_options = df['song_name'].unique()
+selected_song = st.selectbox("Select a Song", song_options)
 
-# Drop missing values
-df = df.dropna()
+# Show album art for selected song
+song_info = df[df['song_name'] == selected_song].iloc[0]
+st.image(song_info['image_url'], width=200)
+st.write(f"**Artist:** {song_info['artist']}  |  **Album:** {song_info['album']}")
+st.write(f"**Genre:** {song_info['genre']}  |  **Mood:** {song_info['mood']}")
 
-# Select important numerical features
-features = ['danceability', 'energy', 'loudness', 'tempo']
-
-# Make sure features exist
-df = df[features + ['track_name']]
-
-X = df[features]
-
-# Scale features
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+# -------------------------
+# 4. Recommendation Calculation
+# -------------------------
+feature_cols = ['energy', 'danceability', 'tempo']
+song_features = df[feature_cols]
 
 # Compute similarity
-similarity = cosine_similarity(X_scaled)
+similarity_matrix = cosine_similarity(song_features)
+song_index = df[df['song_name'] == selected_song].index[0]
+similar_songs_idx = np.argsort(similarity_matrix[song_index])[::-1]
 
-# Song selection dropdown
-song_list = df['track_name'].values
-selected_song = st.selectbox("Select a Song", song_list)
+# -------------------------
+# 5. Display Recommended Songs
+# -------------------------
+st.subheader("🎧 Recommended Songs:")
 
-def recommend(song):
-    index = df[df['track_name'] == song].index[0]
-    distances = list(enumerate(similarity[index]))
-    distances = sorted(distances, key=lambda x: x[1], reverse=True)[1:6]
-    
-    recommended_songs = []
-    for i in distances:
-        recommended_songs.append(df.iloc[i[0]]['track_name'])
-    return recommended_songs
+# Top 5 recommendations
+top_n = 5
+rec_idx = [i for i in similar_songs_idx if i != song_index][:top_n]
 
-if st.button("Recommend"):
-    recommendations = recommend(selected_song)
-    st.subheader("🎧 Recommended Songs:")
-    for song in recommendations:
-        st.write(song)
+# Display in cards using columns
+cols = st.columns(top_n)
+for i, idx in enumerate(rec_idx):
+    with cols[i]:
+        rec_song = df.iloc[idx]
+        st.image(rec_song['image_url'], width=150)
+        st.write(f"**{rec_song['song_name']}**")
+        st.write(f"*{rec_song['artist']}*")
+        st.write(f"Genre: {rec_song['genre']}")
+        st.write(f"Mood: {rec_song['mood']}")
