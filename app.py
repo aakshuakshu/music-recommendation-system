@@ -4,12 +4,29 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 # -------------------------
-# 1. Load Dataset
+# 1. Load Processed Dataset
 # -------------------------
-df = pd.read_csv('dataset.csv')
+try:
+    df = pd.read_csv('processed_dataset.csv')  # your processed CSV
+except FileNotFoundError:
+    st.error("Processed dataset not found! Make sure 'processed_dataset.csv' exists.")
+    st.stop()
 
 # -------------------------
-# 2. App Title & Description
+# 2. Check Columns
+# -------------------------
+expected_cols = [
+    'track_name', 'artists', 'album_name', 'track_genre',
+    'tempo', 'energy', 'danceability', 'loudness', 'valence', 'popularity'
+]
+
+missing_cols = [col for col in expected_cols if col not in df.columns]
+if missing_cols:
+    st.error(f"The following required columns are missing in the CSV: {missing_cols}")
+    st.stop()
+
+# -------------------------
+# 3. App Title & Description
 # -------------------------
 st.set_page_config(page_title="🎵 Intelligent Music Recommender", layout="wide")
 st.title("🎵 Intelligent Music Recommendation System")
@@ -17,30 +34,29 @@ st.subheader("MCA Final Year Project - ML-Based Recommendation")
 st.write("Select a song you like, and get smart recommendations!")
 
 # -------------------------
-# 3. Song Selection
+# 4. Song Selection
 # -------------------------
-song_options = df['song_name'].unique()
+song_options = df['track_name'].unique()
 selected_song = st.selectbox("Select a Song", song_options)
 
-# Show album art for selected song
-song_info = df[df['song_name'] == selected_song].iloc[0]
-st.image(song_info['image_url'], width=200)
-st.write(f"**Artist:** {song_info['artist']}  |  **Album:** {song_info['album']}")
-st.write(f"**Genre:** {song_info['genre']}  |  **Mood:** {song_info['mood']}")
+# Show info for selected song
+song_info = df[df['track_name'] == selected_song].iloc[0]
+st.write(f"**Artist:** {song_info['artists']}  |  **Album:** {song_info['album_name']}")
+st.write(f"**Genre:** {song_info['track_genre']}  |  **Popularity:** {song_info['popularity']}")
 
 # -------------------------
-# 4. Recommendation Calculation
+# 5. Recommendation Calculation
 # -------------------------
-feature_cols = ['energy', 'danceability', 'tempo']
+feature_cols = ['energy', 'danceability', 'tempo', 'loudness', 'valence']
 song_features = df[feature_cols]
 
-# Compute similarity
+# Compute cosine similarity
 similarity_matrix = cosine_similarity(song_features)
-song_index = df[df['song_name'] == selected_song].index[0]
+song_index = df[df['track_name'] == selected_song].index[0]
 similar_songs_idx = np.argsort(similarity_matrix[song_index])[::-1]
 
 # -------------------------
-# 5. Display Recommended Songs
+# 6. Display Recommended Songs
 # -------------------------
 st.subheader("🎧 Recommended Songs:")
 
@@ -48,13 +64,12 @@ st.subheader("🎧 Recommended Songs:")
 top_n = 5
 rec_idx = [i for i in similar_songs_idx if i != song_index][:top_n]
 
-# Display in cards using columns
 cols = st.columns(top_n)
 for i, idx in enumerate(rec_idx):
     with cols[i]:
         rec_song = df.iloc[idx]
-        st.image(rec_song['image_url'], width=150)
-        st.write(f"**{rec_song['song_name']}**")
-        st.write(f"*{rec_song['artist']}*")
-        st.write(f"Genre: {rec_song['genre']}")
-        st.write(f"Mood: {rec_song['mood']}")
+        st.write(f"**{rec_song['track_name']}**")
+        st.write(f"*{rec_song['artists']}*")
+        st.write(f"Album: {rec_song['album_name']}")
+        st.write(f"Genre: {rec_song['track_genre']}")
+        st.write(f"Popularity: {rec_song['popularity']}")
