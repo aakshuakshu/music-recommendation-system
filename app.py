@@ -6,7 +6,7 @@ import numpy as np
 # -------------------------
 # 1. Load Dataset
 # -------------------------
-df = pd.read_csv('songs_dataset.csv')
+df = pd.read_csv('dataset.csv')
 
 # -------------------------
 # 2. App Title & Description
