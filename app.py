@@ -7,7 +7,7 @@ import numpy as np
 # 1. Load Processed Dataset
 # -------------------------
 try:
-    df = pd.read_csv('processed_music_dataset.csv')  # processed CSV
+    df = pd.read_csv('processed_music_data.csv')  # processed CSV
 except FileNotFoundError:
     st.error("Processed dataset not found! Make sure 'processed_music_dataset.csv' exists.")
     st.stop()
