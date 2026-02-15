@@ -14,8 +14,9 @@ def generate_recommendations(df, genres, mood, activity):
 
     # Filter by genre
     if genres:
-        user_df = df[df["genre"].isin(genres)]
-   
+    user_df = df[df["genre"].isin(genres)]
+    df = df[df["genre"].isin(genres)]   # ADD THIS
+
 
     if user_df.empty:
         return None
