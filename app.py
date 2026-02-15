@@ -3,34 +3,78 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-
+# -------------------------------------------------
+# Page Config
+# -------------------------------------------------
 st.set_page_config(page_title="Music Recommender", layout="wide")
 
 st.title("🎵 Intelligent Music Recommendation System")
 
+# -------------------------------------------------
+# Load Dataset
+# -------------------------------------------------
+@st.cache_data
+def load_data():
+    return pd.read_csv("dataset.csv")
+
+try:
+    df = load_data()
+except Exception as e:
+    st.error(f"Dataset loading error: {e}")
+    st.stop()
+
+# -------------------------------------------------
+# Required Columns Check
+# -------------------------------------------------
+required_columns = [
+    "track_name",
+    "artists",
+    "album_name",
+    "genre",
+    "energy",
+    "danceability",
+    "valence",
+    "tempo",
+    "acousticness",
+    "instrumentalness"
+]
+
+missing_cols = [col for col in required_columns if col not in df.columns]
+
+if missing_cols:
+    st.error(f"Missing columns in dataset: {missing_cols}")
+    st.stop()
+
+# -------------------------------------------------
+# User Input Section
+# -------------------------------------------------
 genres = st.multiselect(
     "Select Your Favorite Genres:",
-    ["Hip-Hop", "Pop", "Rock", "Classical", "Jazz", "EDM"]
+    df["genre"].unique(),
+    key="genre_select"
 )
 
 mood = st.selectbox(
     "Select Your Current Mood:",
-    ["Happy", "Sad", "Chill", "Energetic"]
+    ["Happy", "Sad", "Chill", "Energetic"],
+    key="mood_select"
 )
 
 activity = st.selectbox(
     "Select Your Activity:",
-    ["Gym", "Study", "Party", "Relax"]
+    ["Gym", "Study", "Party", "Relax"],
+    key="activity_select"
 )
 
 liked_songs = st.text_area(
-    "Enter Previously Liked Songs (comma separated):"
+    "Enter Previously Liked Songs (comma separated):",
+    key="liked_songs_input"
 )
 
-
-if st.button("Generate Recommendations"):
-
-    df = pd.read_csv("dataset.csv")
+# -------------------------------------------------
+# Recommendation Button
+# -------------------------------------------------
+if st.button("Generate Recommendations", key="generate_btn"):
 
     feature_cols = [
         "energy",
@@ -41,10 +85,9 @@ if st.button("Generate Recommendations"):
         "instrumentalness"
     ]
 
-    # =============================
+    # -----------------------------
     # 1️⃣ Build User Taste Vector
-    # =============================
-
+    # -----------------------------
     if genres:
         user_df = df[df["genre"].isin(genres)]
     else:
@@ -56,14 +99,9 @@ if st.button("Generate Recommendations"):
 
     user_vector = user_df[feature_cols].mean().values.reshape(1, -1)
 
-    # Add mood_score
-    mood_score = user_df["valence"].mean()
-    user_vector[0][feature_cols.index("valence")] = mood_score
-
-    # =============================
+    # -----------------------------
     # 2️⃣ Context Weighting
-    # =============================
-
+    # -----------------------------
     weights = np.ones(len(feature_cols))
 
     if mood == "Happy":
@@ -79,10 +117,9 @@ if st.button("Generate Recommendations"):
 
     weighted_features = df[feature_cols] * weights
 
-    # =============================
+    # -----------------------------
     # 3️⃣ Content Similarity
-    # =============================
-
+    # -----------------------------
     similarity_scores = cosine_similarity(
         user_vector,
         weighted_features
@@ -90,23 +127,21 @@ if st.button("Generate Recommendations"):
 
     df["content_score"] = similarity_scores.flatten()
 
-    # =============================
-    # 4️⃣ Collaborative Score (Simple Popularity Proxy)
-    # =============================
-
+    # -----------------------------
+    # 4️⃣ Collaborative Score
+    # -----------------------------
     if "popularity" in df.columns:
         df["collab_score"] = df["popularity"] / df["popularity"].max()
     else:
         df["collab_score"] = 0.5
 
-    # =============================
-    # 5️⃣ Final Score Formula
-    # =============================
-
+    # -----------------------------
+    # 5️⃣ Final Hybrid Score
+    # -----------------------------
     df["final_score"] = (
         0.4 * df["content_score"] +
         0.4 * df["collab_score"] +
-        0.2 * df["content_score"]  # context already applied in weighting
+        0.2 * df["content_score"]
     )
 
     recommendations = df.sort_values(
@@ -120,7 +155,7 @@ if st.button("Generate Recommendations"):
         recommendations[[
             "track_name",
             "artists",
-            "album_name"
+            "album_name",
+            "final_score"
         ]]
     )
-
