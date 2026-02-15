@@ -4,7 +4,7 @@ st.title("🎵 Intelligent Music Recommendation System")
 
 genres = st.multiselect(
     "Select Your Favorite Genres:",
-    ["Pop", "Rock", "Hip-Hop", "Classical", "Jazz", "EDM"]
+    ["Hip-Hop", "Pop", "Classical", "Rock", "Jazz", "EDM"]
 )
 
 mood = st.selectbox(
