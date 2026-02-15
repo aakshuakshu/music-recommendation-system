@@ -65,7 +65,6 @@ required_columns = [
     "track_name",
     "artists",
     "album_name",
-    "genre",
     "energy",
     "danceability",
     "valence",
