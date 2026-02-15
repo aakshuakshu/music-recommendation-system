@@ -2,6 +2,35 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+df = pd.read_csv("dataset.csv")
+
+# Remove duplicates
+df = df.drop_duplicates(subset=["track_name", "artists"])
+
+# Drop rows with missing essential features
+df = df.dropna(subset=[
+    "energy",
+    "danceability",
+    "valence",
+    "tempo",
+    "acousticness",
+    "instrumentalness"
+])
+
+# Convert to numeric (safe conversion)
+feature_cols = [
+    "energy",
+    "danceability",
+    "valence",
+    "tempo",
+    "acousticness",
+    "instrumentalness"
+]
+
+for col in feature_cols:
+    df[col] = pd.to_numeric(df[col], errors="coerce")
+
+df = df.dropna(subset=feature_cols)
 
 # -------------------------------------------------
 # Page Config
