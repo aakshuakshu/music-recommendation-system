@@ -27,11 +27,10 @@ liked_songs = st.text_area(
     "Enter Previously Liked Songs (comma separated):"
 )
 
-if st.button("Generate Recommendations"):
-    st.success("Recommendations Generated Successfully!")
+
 if st.button("Generate Recommendations"):
 
-    df = pd.read_csv("processed_music_data.csv")
+    df = pd.read_csv("dataset.csv")
 
     feature_cols = [
         "energy",
