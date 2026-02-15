@@ -1,10 +1,12 @@
 import streamlit as st
 
+st.set_page_config(page_title="Music Recommender", layout="wide")
+
 st.title("🎵 Intelligent Music Recommendation System")
 
 genres = st.multiselect(
     "Select Your Favorite Genres:",
-    ["Hip-Hop", "Pop", "Classical", "Rock", "Jazz", "EDM"]
+    ["Hip-Hop", "Pop", "Rock", "Classical", "Jazz", "EDM"]
 )
 
 mood = st.selectbox(
@@ -22,4 +24,4 @@ liked_songs = st.text_area(
 )
 
 if st.button("Generate Recommendations"):
-    st.success("Generating recommendations based on your preferences...")
+    st.success("Recommendations Generated Successfully!")
