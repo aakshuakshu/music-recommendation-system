@@ -1,38 +1,73 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
+from utils import load_and_clean_data
+from recommender import generate_recommendations
 
-@st.cache_data
-def load_data():
-    df = pd.read_csv("dataset.csv")
+st.set_page_config(page_title="Music Recommender", layout="wide")
 
-    # Make all column names lowercase
-    df.columns = df.columns.str.lower().str.strip()
+st.title("🎵 Intelligent Music Recommendation System")
 
-    # If dataset has track_genre, rename it to genre
-    if "track_genre" in df.columns:
-        df = df.rename(columns={"track_genre": "genre"})
+# Load data
+df = load_and_clean_data("dataset.csv")
 
-    # Remove duplicates
-    df = df.drop_duplicates(subset=["track_name", "artists"])
+# Layout
+left_col, right_col = st.columns([1, 2])
 
-    # Required numeric features
-    feature_cols = [
-        "energy",
-        "danceability",
-        "valence",
-        "tempo",
-        "acousticness",
-        "instrumentalness"
-    ]
+with left_col:
+    st.header("🎧 Your Preferences")
 
-    # Convert to numeric
-    for col in feature_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+    genres = st.multiselect(
+        "Select Genre",
+        sorted(df["genre"].unique())
+    )
 
-    # Drop missing rows
-    df = df.dropna(subset=feature_cols)
+    mood = st.selectbox(
+        "Select Mood",
+        ["Happy", "Sad", "Chill", "Energetic"]
+    )
 
-    return df
+    activity = st.selectbox(
+        "Select Activity",
+        ["Party", "Gym", "Study", "Relax"]
+    )
+
+    liked_songs = st.text_area(
+        "Previously Liked Songs"
+    )
+
+    generate = st.button("Generate Recommendations")
+
+if generate:
+
+    if not liked_songs.strip():
+        st.info("No listening history found. Using genre and context-based filtering.")
+
+    recommendations = generate_recommendations(
+        df, genres, mood, activity
+    )
+
+    if recommendations is None:
+        st.warning("No songs found for selected genre.")
+    else:
+        with right_col:
+            st.header("🎵 Top Recommendations")
+
+            recommendations["confidence"] = (
+                recommendations["final_score"] * 100
+            ).round(2)
+
+            st.dataframe(
+                recommendations[[
+                    "track_name",
+                    "artists",
+                    "genre",
+                    "confidence"
+                ]]
+            )
+
+        st.subheader("🔎 Why These Songs?")
+        st.markdown(f"""
+        Based on your love for **{', '.join(genres) if genres else 'various genres'}**,
+        your **{mood} mood**, and **{activity} activity**,
+        we prioritized high-energy and high-valence tracks.
+        """)
