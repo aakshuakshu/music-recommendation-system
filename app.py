@@ -14,7 +14,7 @@ df = load_and_clean_data("dataset.csv")
 left_col, right_col = st.columns([1, 2])
 
 with left_col:
-    st.header("🎧 Your Preferences")
+    st.header("🎧 group Preferences")
 
     genres = st.multiselect(
         "Select Genre",
