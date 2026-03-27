@@ -2,13 +2,30 @@ import streamlit as st
 import pandas as pd
 from utils import load_and_clean_data
 from recommender import generate_recommendations
-
+import urllib.parse
 st.set_page_config(page_title="Music Recommender", layout="wide")
 
 st.title("🎵 Intelligent Music Recommendation System")
 
 # Load data
 df = load_and_clean_data("dataset.csv")
+
+
+
+# ---------------- HELPER FUNCTION ----------------
+def get_links(track, artist):
+    query = urllib.parse.quote(f"{track} {artist}")
+
+    youtube_url = f"https://www.youtube.com/results?search_query={query}"
+    spotify_url = f"https://open.spotify.com/search/{query}"
+
+    return youtube_url, spotify_url
+
+
+
+
+
+
 
 # Layout
 left_col, right_col = st.columns([1, 2])
@@ -36,7 +53,8 @@ with left_col:
     )
 
     generate = st.button("Generate Recommendations")
-
+    
+# ---------------- GENERATE ----------------
 if generate:
 
     if not liked_songs.strip():
@@ -67,45 +85,36 @@ if generate:
 
 
 
-          # ---------------- PLAYER SECTION ----------------
-        st.subheader("🎧 Click & Play Song")
+
+                # ---------------- PLAYER SECTION ----------------
+        st.subheader("🎧 Listen Online")
 
         song_list = recommendations["track_name"].tolist()
 
-        selected_song = st.selectbox("Select a song to play", song_list)
+        selected_song = st.selectbox("Select a song", song_list)
 
         song_data = recommendations[
             recommendations["track_name"] == selected_song
         ].iloc[0]
 
-        st.write(f"🎤 **Artist:** {song_data['artists']}")
+        track = song_data["track_name"]
+        artist = song_data["artists"]
 
-        # ▶️ PLAY AUDIO (if preview_url exists)
-        if "preview_url" in recommendations.columns:
-            preview = song_data.get("preview_url")
+        st.write(f"🎤 **Artist:** {artist}")
 
-            if pd.notna(preview) and preview != "":
-                st.audio(preview)
-                st.success("Now Playing 🎶")
-            else:
-                st.warning("No audio preview available for this song.")
+        # Generate streaming links
+        youtube_url, spotify_url = get_links(track, artist)
 
-        # 🔗 FALLBACK LINK (Spotify / YouTube)
-        if "spotify_url" in recommendations.columns:
-            spotify_link = song_data.get("spotify_url")
+        # ---------------- BUTTONS ----------------
+        col1, col2 = st.columns(2)
 
-            if pd.notna(spotify_link) and spotify_link != "":
-                st.markdown(f"[▶️ Open in Spotify]({spotify_link})")
+        with col1:
+            st.link_button("▶️ Play on YouTube", youtube_url)
+
+        with col2:
+            st.link_button("🎵 Open in Spotify", spotify_url)
 
         # ---------------- WHY SECTION ----------------
-        st.subheader("🔎 Why These Songs?")
-
-        st.markdown(f"""
-        Based on your preference for **{', '.join(genres) if genres else 'various genres'}**,  
-        your **{mood} mood**, and **{activity} activity**,  
-        we prioritized songs with high energy, danceability, and positive vibe.
-        """)
-
 
 
 
