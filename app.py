@@ -7,6 +7,14 @@ st.set_page_config(page_title="Music Recommender", layout="wide")
 
 st.title("🎵 Intelligent Music Recommendation System")
 
+
+# ---------------- SESSION STATE FIX ----------------
+if "recommendations" not in st.session_state:
+    st.session_state.recommendations = None
+
+
+
+
 # Load data
 df = load_and_clean_data("dataset.csv")
 
@@ -86,33 +94,62 @@ if generate:
 
 
 
-                # ---------------- PLAYER SECTION ----------------
-        st.subheader("🎧 Listen Online")
+              # ---------------- GENERATE ONCE ----------------
+if generate:
+    if not liked_songs.strip():
+        st.info("No listening history found. Using context-based filtering.")
 
-        song_list = recommendations["track_name"].tolist()
+    recs = generate_recommendations(df, genres, mood, activity)
 
-        selected_song = st.selectbox("Select a song", song_list)
+    if recs is None or recs.empty:
+        st.warning("No songs found.")
+    else:
+        st.session_state.recommendations = recs
 
-        song_data = recommendations[
-            recommendations["track_name"] == selected_song
-        ].iloc[0]
 
-        track = song_data["track_name"]
-        artist = song_data["artists"]
+# ---------------- DISPLAY ALWAYS ----------------
+if st.session_state.recommendations is not None:
 
-        st.write(f"🎤 **Artist:** {artist}")
+    recs = st.session_state.recommendations.copy()
 
-        # Generate streaming links
-        youtube_url, spotify_url = get_links(track, artist)
+    recs["confidence"] = (recs["final_score"] * 100).round(2)
 
-        # ---------------- BUTTONS ----------------
-        col1, col2 = st.columns(2)
+    # ---------------- TOP SONGS ----------------
+    st.subheader("🔥 Top Recommendations")
 
-        with col1:
-            st.link_button("▶️ Play on YouTube", youtube_url)
+    st.dataframe(
+        recs.head(10)[[
+            "track_name",
+            "artists",
+            "genre",
+            "confidence"
+        ]]
+    )
 
-        with col2:
-            st.link_button("🎵 Open in Spotify", spotify_url)
+    # ---------------- FULL SONG LIST ----------------
+    st.subheader("🎵 All Available Songs")
+
+    selected_song = st.selectbox(
+        "Pick any song to play",
+        recs["track_name"].tolist()
+    )
+
+    song = recs[recs["track_name"] == selected_song].iloc[0]
+
+    st.write(f"🎤 **Artist:** {song['artists']}")
+    st.write(f"🎼 **Genre:** {song['genre']}")
+    st.write(f"⭐ Score: {song['confidence']:.2f}")
+
+    # ---------------- PLAY LINKS ----------------
+    youtube_url, spotify_url = get_links(song["track_name"], song["artists"])
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.link_button("▶️ Play on YouTube", youtube_url)
+
+    with col2:
+        st.link_button("🎵 Open in Spotify", spotify_url)
 
         # ---------------- WHY SECTION ----------------
 
