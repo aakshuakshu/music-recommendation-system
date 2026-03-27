@@ -65,6 +65,53 @@ if generate:
                 ]]
             )
 
+
+
+          # ---------------- PLAYER SECTION ----------------
+        st.subheader("🎧 Click & Play Song")
+
+        song_list = recommendations["track_name"].tolist()
+
+        selected_song = st.selectbox("Select a song to play", song_list)
+
+        song_data = recommendations[
+            recommendations["track_name"] == selected_song
+        ].iloc[0]
+
+        st.write(f"🎤 **Artist:** {song_data['artists']}")
+
+        # ▶️ PLAY AUDIO (if preview_url exists)
+        if "preview_url" in recommendations.columns:
+            preview = song_data.get("preview_url")
+
+            if pd.notna(preview) and preview != "":
+                st.audio(preview)
+                st.success("Now Playing 🎶")
+            else:
+                st.warning("No audio preview available for this song.")
+
+        # 🔗 FALLBACK LINK (Spotify / YouTube)
+        if "spotify_url" in recommendations.columns:
+            spotify_link = song_data.get("spotify_url")
+
+            if pd.notna(spotify_link) and spotify_link != "":
+                st.markdown(f"[▶️ Open in Spotify]({spotify_link})")
+
+        # ---------------- WHY SECTION ----------------
+        st.subheader("🔎 Why These Songs?")
+
+        st.markdown(f"""
+        Based on your preference for **{', '.join(genres) if genres else 'various genres'}**,  
+        your **{mood} mood**, and **{activity} activity**,  
+        we prioritized songs with high energy, danceability, and positive vibe.
+        """)
+
+
+
+
+
+        
+
         st.subheader("🔎 Why These Songs?")
         st.markdown(f"""
         Based on your love for **{', '.join(genres) if genres else 'various genres'}**,
