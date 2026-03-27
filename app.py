@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 import urllib.parse
 
 from utils import load_and_clean_data
@@ -9,12 +10,13 @@ st.set_page_config(page_title="Music Recommender", layout="wide")
 
 st.title("🎵 Intelligent Music Recommendation System")
 
-# ---------------- SESSION STATE ----------------
+
+# ---------------- SESSION STATE FIX ----------------
 if "recommendations" not in st.session_state:
     st.session_state.recommendations = None
 
 
-# ---------------- DATA LOADING ----------------
+# ---------------- DATA LOADING (IMPROVED) ----------------
 @st.cache_data
 def get_data():
     return load_and_clean_data("dataset.csv")
@@ -23,7 +25,7 @@ def get_data():
 df = get_data()
 
 
-# ---------------- UTILITY FUNCTIONS ----------------
+# ---------------- HELPER FUNCTION ----------------
 def get_links(track, artist):
     query = urllib.parse.quote(f"{track} {artist}")
     youtube_url = f"https://www.youtube.com/results?search_query={query}"
@@ -31,15 +33,17 @@ def get_links(track, artist):
     return youtube_url, spotify_url
 
 
-def display_song_details(song):
+def display_song(song):
     st.write(f"🎤 **Artist:** {song['artists']}")
     st.write(f"🎼 **Genre:** {song['genre']}")
     st.write(f"⭐ Score: {song['confidence']:.2f}")
 
 
-# ---------------- SIDEBAR INPUT SECTION ----------------
-with st.sidebar:
-    st.header("🎧 Group Preferences")
+# ---------------- LAYOUT ----------------
+left_col, right_col = st.columns([1, 2])
+
+with left_col:
+    st.header("🎧 group Preferences")
 
     genres = st.multiselect(
         "Select Genre",
@@ -61,8 +65,9 @@ with st.sidebar:
     generate = st.button("Generate Recommendations")
 
 
-# ---------------- RECOMMENDATION ENGINE ----------------
-def run_recommendation():
+# ---------------- RECOMMENDATION GENERATION (FIXED) ----------------
+if generate:
+
     if not liked_songs.strip():
         st.info("No listening history found. Using context-based filtering.")
 
@@ -70,67 +75,62 @@ def run_recommendation():
 
     if recs is None or recs.empty:
         st.warning("No songs found for selected preferences.")
-        return None
-
-    recs["confidence"] = (recs["final_score"] * 100).round(2)
-    return recs
-
-
-# ---------------- GENERATE BUTTON ACTION ----------------
-if generate:
-    st.session_state.recommendations = run_recommendation()
+        st.session_state.recommendations = None
+    else:
+        recs["confidence"] = (recs["final_score"] * 100).round(2)
+        st.session_state.recommendations = recs
 
 
-# ---------------- MAIN DISPLAY SECTION ----------------
+# ---------------- DISPLAY ALWAYS ----------------
 if st.session_state.recommendations is not None:
 
-    recs = st.session_state.recommendations
+    recs = st.session_state.recommendations.copy()
 
-    # ---------------- TOP SECTION ----------------
-    col1, col2 = st.columns([2, 3])
+    # ensure confidence exists even if recomputed
+    if "confidence" not in recs.columns:
+        recs["confidence"] = (recs["final_score"] * 100).round(2)
 
-    with col1:
+    # ---------------- TOP 10 ----------------
+    with right_col:
         st.subheader("🔥 Top Recommendations")
 
         st.dataframe(
             recs.head(10)[["track_name", "artists", "genre", "confidence"]]
         )
 
+    # ---------------- FULL SONG LIST ----------------
+    st.subheader("🎵 All Available Songs")
+
+    selected_song = st.selectbox(
+        "Pick any song to play",
+        recs["track_name"].tolist()
+    )
+
+    song = recs[recs["track_name"] == selected_song].iloc[0]
+
+    display_song(song)
+
+    # ---------------- PLAY LINKS ----------------
+    youtube_url, spotify_url = get_links(song["track_name"], song["artists"])
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.link_button("▶️ Play on YouTube", youtube_url)
+
     with col2:
-        st.subheader("🎵 Song Selection")
-
-        selected_song = st.selectbox(
-            "Pick any song to play",
-            recs["track_name"].tolist()
-        )
-
-        song = recs[recs["track_name"] == selected_song].iloc[0]
-
-        display_song_details(song)
-
-        youtube_url, spotify_url = get_links(song["track_name"], song["artists"])
-
-        c1, c2 = st.columns(2)
-
-        with c1:
-            st.link_button("▶️ Play on YouTube", youtube_url)
-
-        with c2:
-            st.link_button("🎵 Open in Spotify", spotify_url)
+        st.link_button("🎵 Open in Spotify", spotify_url)
 
     # ---------------- WHY SECTION ----------------
     st.subheader("🔎 Why These Songs?")
 
-    st.markdown(
-        f"""
-        Based on your selected preferences:
-        - Genre: **{', '.join(genres) if genres else 'All'}**
-        - Mood: **{mood}**
-        - Activity: **{activity}**
+    st.markdown(f"""
+    Based on your love for **{', '.join(genres) if genres else 'various genres'}**,  
+    your **{mood} mood**, and **{activity} activity**,  
+    we ranked songs using a hybrid recommendation score.
 
-        The system uses a **hybrid scoring model**:
-        - Content similarity
-        - Genre matching
-        - Popularity weighting
-        """
-    )
+    **Scoring includes:**
+    - Content similarity
+    - Genre matching
+    - Popularity weighting
+    """)
